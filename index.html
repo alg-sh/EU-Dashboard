@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EU NUTS3 Map</title>
+
+  <!-- Vendor CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Your CSS (cacheable) -->
+  <link rel="stylesheet" href="/assets/css/map.css" />
+</head>
+<body>
+
+  <!-- Namespace all UI to avoid CSS collisions -->
+  <div class="map-app">
+
+    <!-- Filters (top-left) -->
+    <div id="filters" class="map-card">
+      <label for="measure-select">Select Measure:</label>
+
+      <!-- Native select kept for semantics; JS enhances it into a custom dropdown -->
+      <select id="measure-select" class="js-map-select" aria-label="Select Measure">
+        <option value="forgottenVoters">Forgotten Voters Share (%)</option>
+        <option value="willingnessPay">Willingness to Pay for Climate Action (%)</option>
+        <option value="renewableSupport">Renewable Energy Support (%)</option>
+      </select>
+    </div>
+
+    <!-- Dynamic map title (center top). aria-live announces updates to AT users -->
+    <div id="map-title" aria-live="polite"></div>
+
+    <!-- Search (bottom-left) -->
+    <div id="search-region">
+      <input id="region-search" class="map-ui-input" placeholder="Type to search" autocomplete="off" />
+    </div>
+
+    <!-- Custom autocomplete dropdown (replaces <datalist>) -->
+    <div id="region-ac" role="listbox" aria-label="Regions"></div>
+
+    <!-- Map -->
+    <div id="map" role="region" aria-label="Interactive map of EU NUTS3 regions"></div>
+  </div>
+
+  <!-- Vendor JS (loaded before your code) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <!-- Your JS (deferred so DOM is parsed first) -->
+  <script src="/assets/js/map.js" defer></script>
+</body>
+</html>

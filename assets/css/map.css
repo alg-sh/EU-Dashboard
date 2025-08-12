@@ -1,0 +1,168 @@
+/* ================================
+   Fonts (local, cache-friendly)
+   ================================ */
+@font-face {
+  font-family: 'BeausiteClassicWeb';
+  src: url('/assets/fonts/BeausiteClassicWeb-Clear.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'BeausiteClassicWeb';
+  src: url('/assets/fonts/BeausiteClassicWeb-Medium.woff2') format('woff2');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'BeausiteClassicWeb';
+  src: url('/assets/fonts/BeausiteClassicWeb-Semibold.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+
+/* ================================
+   Global + App namespace
+   ================================ */
+html, body { font-family: 'BeausiteClassicWeb', Arial, sans-serif !important; }
+body { margin: 0; background: #2A192C; color: #fff; }
+.leaflet-container, .leaflet-control { font-family: inherit !important; }
+
+.map-app #map { height: 100vh; }
+.map-app .map-card { background: rgba(42,25,44,0.85); }
+
+/* ================================
+   Shared input look (closed-state)
+   ================================ */
+.map-app .map-ui-input {
+  background: #6E5F6F;
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  border: none;
+  border-radius: 4px;
+  padding: 7px 10px;
+  width: 100%;
+}
+.map-app .map-ui-input::placeholder { color: #fff; opacity: 1; }
+.map-app .map-ui-input:focus {
+  outline: none;
+  box-shadow: 0 0 6px 1px rgba(255,255,255,0.15);
+  background-color: #6E5F6F;
+}
+
+/* ================================
+   Layout
+   ================================ */
+.map-app #filters {
+  position: absolute; top: 10px; left: 10px; z-index: 1000;
+  padding: 10px; border-radius: 6px; min-width: 220px;
+  display: flex; flex-direction: column; gap: 8px;
+  font-size: 0.9em; /* a bit smaller per your request */
+}
+.map-app #filters label { display: block; font-weight: 600; }
+
+.map-app #map-title {
+  position: absolute;
+  top: 10px; left: 50%; transform: translateX(-50%);
+  z-index: 1100; pointer-events: none;
+  font-size: 1.8em; font-weight: 700; line-height: 1.2;
+  color: #fff; text-align: center;
+}
+
+.map-app #search-region {
+  position: absolute; bottom: 10px; left: 10px; z-index: 1000;
+  background: none; padding: 0; border-radius: 0; min-width: auto;
+}
+
+/* ================================
+   Custom autocomplete (replaces <datalist>)
+   ================================ */
+.map-app #region-ac {
+  position: absolute; left: 10px; bottom: 56px; z-index: 1500;
+  width: calc(220px - 20px); max-height: 220px; overflow-y: auto;
+  display: none; background: rgba(42, 25, 44, 0.98);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 4px;
+  font-family: inherit;
+}
+.map-app #region-ac div {
+  padding: 6px 8px; border-radius: 4px; cursor: pointer; color: #fff; font-weight: 500;
+}
+.map-app #region-ac div:hover,
+.map-app #region-ac div[aria-selected="true"] { background: #6E5F6F; }
+
+/* ================================
+   Custom Select (enhanced native select)
+   ================================ */
+.map-app .map-select { position: relative; }
+.map-app .map-select__toggle {
+  background: #6E5F6F; color: #fff; font-family: inherit; font-size: 0.95em;
+  font-weight: 400; border: none; border-radius: 4px; padding: 5px 10px; width: 100%;
+  text-align: left; cursor: pointer;
+}
+.map-app .map-select__toggle:focus { outline: none; box-shadow: 0 0 6px 1px rgba(255,255,255,0.15); }
+.map-app .map-select__toggle:focus-visible { outline: 2px solid #A1FCC2; outline-offset: 2px; }
+
+.map-app .map-select__chevron {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; opacity: 0.8;
+}
+.map-app .map-select__menu {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 1600;
+  display: none; background: rgba(42, 25, 44, 0.98);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 4px;
+  max-height: 240px; overflow-y: auto; font-family: inherit;
+}
+.map-app .map-select.open .map-select__menu { display: block; }
+.map-app .map-select__option {
+  padding: 5px 8px; border-radius: 4px; cursor: pointer; color: #fff; font-weight: 500;
+}
+.map-app .map-select__option:hover,
+.map-app .map-select__option[aria-selected="true"] { background: #6E5F6F; }
+
+/* ================================
+   Info box (top-right)
+   ================================ */
+.map-app .info {
+  background: rgba(42, 25, 44, 0.9);
+  padding: 8px 12px; border-radius: 6px; font-size: 15px;
+  position: absolute; top: 10px; right: 10px; min-width: 240px;
+  pointer-events: none; z-index: 1100; font-weight: 700;
+}
+.map-app .info .region-name { color: #A1FCC2; font-size: 1.1em; }
+
+/* ================================
+   Leaflet background
+   ================================ */
+.map-app .leaflet-container { background: #2A192C; }
+
+/* ================================
+   Combined Zoom + Home (bottom-right)
+   ================================ */
+.map-app .zoom-home a {
+  background: #6E5F6F; color: #fff; width: 34px; height: 34px; line-height: 34px;
+  text-align: center; font-weight: 700;
+}
+.map-app .zoom-home .zoom-in-btn, 
+.map-app .zoom-home .zoom-out-btn { font-size: 20px; line-height: 34px; }
+
+/* Prevent white focus, only darken on hover */
+.map-app .leaflet-bar.zoom-home a,
+.map-app .leaflet-bar.zoom-home a:focus,
+.map-app .leaflet-bar.zoom-home a:active,
+.map-app .leaflet-bar.zoom-home a:focus-visible,
+.map-app .leaflet-bar.zoom-home a.leaflet-disabled,
+.map-app .leaflet-bar.zoom-home a.leaflet-disabled:hover {
+  background: #6E5F6F !important; color: #fff !important; outline: none !important;
+  box-shadow: none !important; filter: none !important;
+}
+.map-app .leaflet-bar.zoom-home a:hover,
+.map-app .leaflet-bar.zoom-home a:focus:hover,
+.map-app .leaflet-bar.zoom-home a:active:hover { filter: brightness(0.8) !important; }
+.map-app .zoom-home a + a { border-top: 1px solid rgba(255,255,255,0.2); }
+.map-app .zoom-home .home svg { width: 16px; height: 16px; vertical-align: middle; display: inline-block; }
+
+/* ================================
+   Small screens
+   ================================ */
+@media (max-width: 480px) {
+  .map-app #map-title { font-size: 1.5em; }
+  .map-app #filters { font-size: 0.85em; }
+}

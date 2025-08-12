@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EU NUTS3 Map</title>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- PapaParse -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<style>
+/* === 1) Local font files === */
+@font-face {
+  font-family: 'BeausiteClassicWeb';
+  src: url('/assets/fonts/BeausiteClassicWeb-Clear.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'BeausiteClassicWeb';
+  src: url('/assets/fonts/BeausiteClassicWeb-Medium.woff2') format('woff2');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'BeausiteClassicWeb';
+  src: url('/assets/fonts/BeausiteClassicWeb-Semibold.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+
+/* === 2) Apply globally with fallback === */
+html, body { font-family: 'BeausiteClassicWeb', Arial, sans-serif !important; }
+
+/* Leaflet controls inherit font */
+.leaflet-container, .leaflet-control { font-family: inherit !important; }
+
+/* === 3) Shared input style (closed state look) === */
+.map-ui-input {
+  background: #6E5F6F;
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  border: none;
+  border-radius: 4px;
+  padding: 7px 10px;
+  width: 100%;
+}
+.map-ui-input::placeholder { color: #fff; opacity: 1; }
+.map-ui-input:focus {
+  outline: none;
+  box-shadow: 0 0 6px 1px rgba(255, 255, 255, 0.15);
+  background-color: #6E5F6F;
+}
+
+/* --- Page / layout --- */
+body { margin: 0; background: #2A192C; color: white; }
+#map { height: 100vh; }
+
+/* Filters (top-right) */
+#filters {
+  position: absolute; top: auto; left: 10px; z-index: 1000;
+  background: rgba(42, 25, 44, 0.85);
+  padding: 10px; border-radius: 6px; text-align: left; min-width: 220px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+#filters label { display: block; color: white; font-weight: 600; }
+
+/* Search (bottom-left) */
+#search-region {
+  position: absolute; bottom: 10px; left: 10px; z-index: 1000;
+  background: none;
+  padding: 10px; border-radius: 6px; min-width: auto;
+  color: white; text-align: left;
+}
+
+/* Custom autocomplete (replaces <datalist>) */
+#region-ac {
+  position: absolute; left: 10px; bottom: 56px; z-index: 1500;
+  width: calc(220px - 20px); max-height: 220px; overflow-y: auto;
+  display: none; background: rgba(42, 25, 44, 0.98);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 4px;
+  font-family: inherit;
+}
+#region-ac div {
+  padding: 6px 8px; border-radius: 4px; cursor: pointer; color: #fff; font-weight: 500;
+}
+#region-ac div:hover,
+#region-ac div[aria-selected="true"] { background: #6E5F6F; }
+
+/* Custom Select (open menu matches autocomplete) */
+.map-select {
+  position: relative;
+}
+.map-select__toggle {
+  /* closed look uses the same shared style */
+  composes: map-ui-input; /* if your build supports it; otherwise duplicate: */
+  background: #6E5F6F; color: #fff; font-family: inherit; font-size: 14px;
+  font-weight: 400; border: none; border-radius: 4px; padding: 7px 10px; width: 100%;
+  text-align: left; cursor: pointer;
+}
+.map-select__toggle:focus {
+  outline: none; box-shadow: 0 0 6px 1px rgba(255,255,255,0.15);
+}
+.map-select__chevron {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; opacity: 0.8;
+}
+.map-select__menu {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 1600;
+  display: none; background: rgba(42, 25, 44, 0.98);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 4px;
+  max-height: 240px; overflow-y: auto; font-family: inherit;
+}
+.map-select.open .map-select__menu { display: block; }
+.map-select__option {
+  padding: 6px 8px; border-radius: 4px; cursor: pointer; color: #fff; font-weight: 500;
+}
+.map-select__option:hover,
+.map-select__option[aria-selected="true"] { background: #6E5F6F; }
+
+/* Info box */
+.info {
+  background: rgba(42, 25, 44, 0.9); padding: 8px 12px; border-radius: 6px; font-size: 15px;
+  position: absolute; top: 10px; right: 10px; min-width: 240px; pointer-events: none; z-index: 1100;
+  font-weight: 700;
+}
+
+/* Leaflet background */
+.leaflet-container { background: #2A192C; }
+
+/* Combined Zoom + Home (bottom-right) */
+.zoom-home a {
+  background: #6E5F6F; color: #fff; width: 34px; height: 34px; line-height: 34px;
+  text-align: center; font-weight: 700;
+}
+.zoom-home .zoom-in-btn, .zoom-home .zoom-out-btn { font-size: 20px; line-height: 34px; }
+
+/* Prevent white focus, only darken on hover */
+.leaflet-bar.zoom-home a,
+.leaflet-bar.zoom-home a:focus,
+.leaflet-bar.zoom-home a:active,
+.leaflet-bar.zoom-home a:focus-visible,
+.leaflet-bar.zoom-home a.leaflet-disabled,
+.leaflet-bar.zoom-home a.leaflet-disabled:hover {
+  background: #6E5F6F !important; color: #fff !important; outline: none !important;
+  box-shadow: none !important; filter: none !important;
+}
+.leaflet-bar.zoom-home a:hover,
+.leaflet-bar.zoom-home a:focus:hover,
+.leaflet-bar.zoom-home a:active:hover { filter: brightness(0.8) !important; }
+.zoom-home a + a { border-top: 1px solid rgba(255,255,255,0.2); }
+.zoom-home .home svg { width: 16px; height: 16px; vertical-align: middle; display: inline-block; }
+
+.info .region-name {
+  color: #A1FCC2; /* mint green */
+  font-size: 1.1em; 
+}
+
+</style>
+</head>
+<body>
+
+<!-- Filters -->
+<div id="filters">
+  <label for="measure-select">Select Measure:</label>
+  <!-- Native select kept for data + accessibility, enhanced to a custom dropdown -->
+  <select id="measure-select" class="js-map-select" aria-label="Select Measure">
+    <option value="forgottenVoters">Forgotten Voters Share (%)</option>
+    <option value="willingnessPay">Willingness to Pay for Climate Action (%)</option>
+    <option value="renewableSupport">Renewable Energy Support (%)</option>
+  </select>
+</div>
+
+<!-- Search -->
+<div id="search-region">
+  <input id="region-search" class="map-ui-input" placeholder="Type to search" autocomplete="off" />
+</div>
+<!-- Custom autocomplete dropdown -->
+<div id="region-ac" role="listbox" aria-label="Regions"></div>
+
+<div id="map"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+/* ===== Map init ===== */
+const map = L.map('map', {
+  center: [52, 10],
+  zoom: 4,
+  minZoom: 3,
+  maxZoom: 10,
+  attributionControl: false,
+  zoomControl: false
+});
+
+/* Countries silhouette background (self-hosted) */
+(async function addCountriesSilhouette() {
+  const pane = 'countriesPane';
+  if (!map.getPane(pane)) map.createPane(pane);
+  const p = map.getPane(pane);
+  p.style.zIndex = 300; p.style.pointerEvents = 'none';
+
+  const res = await fetch('/assets/world-countries.json');
+  const world = await res.json();
+
+  L.geoJson(world, {
+    pane, interactive: false,
+    style: { fillColor: '#361F38', fillOpacity: 1, color: '#361F38', weight: 0, opacity: 1 }
+  }).addTo(map);
+})();
+
+/* ===== Choropleth config ===== */
+const palette = ['#cde2e2', '#82b6b6', '#307c7b', '#004141'];
+const measureNames = {
+  forgottenVoters: "Forgotten Voters Share",
+  willingnessPay: "Willingness to Pay for Climate Action",
+  renewableSupport: "Renewable Energy Support"
+};
+
+let currentMeasure = 'forgottenVoters';
+let geojsonLayer;
+let dummyData = {};
+let regionLayerMap = {};
+let allRegionNames = [];
+
+/* Utility */
+function getColor(value) {
+  if (value === undefined || value === null || isNaN(value)) return '#444';
+  const min = 20, max = 90;
+  const val = Math.min(Math.max(value, min), max);
+  const theStep = (max - min) / palette.length;
+  const index = Math.min(Math.floor((val - min) / theStep), palette.length - 1);
+  return palette[index];
+}
+function style(feature) {
+  const nutsId = feature.properties.NUTS_ID;
+  const val = dummyData[nutsId] ? dummyData[nutsId][currentMeasure] : undefined;
+  return { fillColor: getColor(val), weight: 0.7, opacity: 1, color: '#2A192C', fillOpacity: 0.9 };
+}
+
+/* Info box */
+const info = L.control({ position: 'topright' });
+info.onAdd = function () { this._div = L.DomUtil.create('div', 'info'); this.update(); return this._div; };
+info.update = function (props) {
+  if (props) {
+    const nutsId = props.NUTS_ID;
+    const val = dummyData[nutsId] ? dummyData[nutsId][currentMeasure] : undefined;
+    this._div.innerHTML =
+      `<strong class="region-name">${props.NUTS_NAME || props.NUTS_ID}</strong><br/>` +
+      `${measureNames[currentMeasure]}: ${val !== undefined ? val + '%' : 'N/A'}`;
+  } else {
+    this._div.innerHTML = 'Hover over a region';
+  }
+};
+
+info.addTo(map);
+
+/* Highlight helpers */
+function highlightLayer(layer) { layer.setStyle({ weight: 0.7, color: '#A1FCC2', fillOpacity: 1 }); layer.bringToFront(); }
+function dimLayer(layer) { layer.setStyle({ weight: 0.5, color: '#555', fillOpacity: 0.2 }); }
+function resetAllHighlights() { if (geojsonLayer) geojsonLayer.setStyle(style); }
+
+/* Feature events */
+function onEachFeature(feature, layer) {
+  const name = feature.properties.NUTS_NAME;
+  if (name) regionLayerMap[name] = layer;
+  layer.on({
+    mouseover: (e) => { highlightLayer(e.target); info.update(e.target.feature.properties); },
+    mouseout:  () => { resetAllHighlights(); info.update(); }
+  });
+}
+
+/* Load data */
+Papa.parse('nuts3-data.csv', {
+  download: true, header: true,
+  complete: function(results) {
+    results.data.forEach(row => {
+      if (row.NUTS_ID) {
+        dummyData[row.NUTS_ID] = {
+          forgottenVoters: parseFloat(row.forgottenVoters),
+          willingnessPay: parseFloat(row.willingnessPay),
+          renewableSupport: parseFloat(row.renewableSupport)
+        };
+      }
+    });
+    loadGeoJSON();
+  }
+});
+function loadGeoJSON() {
+  fetch('nuts3-copy.geojson')
+    .then(res => res.json())
+    .then(data => {
+      geojsonLayer = L.geoJson(data, { style, onEachFeature }).addTo(map);
+      allRegionNames = data.features.map(f => f.properties.NUTS_NAME).filter(Boolean);
+    });
+}
+
+/* ===== Custom autocomplete for search (replaces <datalist>) ===== */
+const searchInput = document.getElementById('region-search');
+const ac = document.getElementById('region-ac');
+let acIndex = -1;
+
+function showAC(items) {
+  if (!items.length) { ac.style.display = 'none'; return; }
+  ac.innerHTML = items.map((n,i)=>`<div role="option" data-i="${i}">${n}</div>`).join('');
+  ac.style.display = 'block'; acIndex = -1;
+}
+function filterAC(term) {
+  const t = term.trim().toLowerCase();
+  if (!t) { ac.style.display = 'none'; resetAllHighlights(); return; }
+  const matches = allRegionNames.filter(n => n.toLowerCase().includes(t)).slice(0, 50);
+  showAC(matches);
+  allRegionNames.forEach(name => {
+    const layer = regionLayerMap[name];
+    if (!layer) return;
+    if (matches.includes(name)) highlightLayer(layer); else dimLayer(layer);
+  });
+}
+function chooseACByName(name) {
+  searchInput.value = name; ac.style.display = 'none';
+  const layer = regionLayerMap[name];
+  if (layer) {
+    map.fitBounds(layer.getBounds());
+    highlightLayer(layer);
+    layer.once('mouseout', () => { geojsonLayer.resetStyle(layer); info.update(); });
+  }
+}
+searchInput.addEventListener('input', () => filterAC(searchInput.value));
+ac.addEventListener('mousedown', (e) => {
+  const item = e.target.closest('[data-i]'); if (!item) return;
+  chooseACByName(item.textContent);
+});
+searchInput.addEventListener('keydown', (e) => {
+  if (ac.style.display !== 'block') return;
+  const items = Array.from(ac.children);
+  if (e.key === 'ArrowDown') { e.preventDefault(); acIndex = Math.min(acIndex + 1, items.length - 1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); acIndex = Math.max(acIndex - 1, 0); }
+  else if (e.key === 'Enter') { if (acIndex >= 0) { e.preventDefault(); chooseACByName(items[acIndex].textContent); } return; }
+  else if (e.key === 'Escape') { ac.style.display = 'none'; resetAllHighlights(); return; } else { return; }
+  items.forEach((el, i) => el.setAttribute('aria-selected', i === acIndex ? 'true' : 'false'));
+  if (items[acIndex]) items[acIndex].scrollIntoView({ block: 'nearest' });
+});
+document.addEventListener('click', (e) => { if (!ac.contains(e.target) && e.target !== searchInput) ac.style.display = 'none'; });
+
+/* ===== Custom Select enhancer (replaces native open list) =====
+   Apply to any <select class="js-map-select"> for consistent styling. */
+function enhanceSelect(select) {
+  // Hide the native select visually but keep it for form semantics (if needed)
+  select.style.position = 'absolute';
+  select.style.opacity = '0';
+  select.style.pointerEvents = 'none';
+  select.style.height = '0';
+  select.style.width = '0';
+
+  // Build custom control
+  const wrapper = document.createElement('div');
+  wrapper.className = 'map-select';
+  wrapper.setAttribute('data-for', select.id || '');
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'map-select__toggle';
+  toggle.textContent = select.options[select.selectedIndex]?.text || 'Select';
+  const chevron = document.createElement('span');
+  chevron.className = 'map-select__chevron';
+  chevron.innerHTML = '&#9662;'; // ▼
+  const menu = document.createElement('div');
+  menu.className = 'map-select__menu';
+  menu.setAttribute('role', 'listbox');
+  menu.setAttribute('aria-label', select.getAttribute('aria-label') || 'Options');
+
+  // Options
+  Array.from(select.options).forEach((opt, i) => {
+    const item = document.createElement('div');
+    item.className = 'map-select__option';
+    item.setAttribute('role', 'option');
+    item.dataset.value = opt.value;
+    item.textContent = opt.text;
+    if (i === select.selectedIndex) item.setAttribute('aria-selected', 'true');
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      // Update custom UI
+      Array.from(menu.children).forEach(el => el.removeAttribute('aria-selected'));
+      item.setAttribute('aria-selected', 'true');
+      toggle.textContent = opt.text;
+      // Update native select value + fire change
+      select.value = opt.value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      // Close
+      wrapper.classList.remove('open');
+    });
+    menu.appendChild(item);
+  });
+
+  // Toggle open/close
+  toggle.addEventListener('click', () => {
+    wrapper.classList.toggle('open');
+  });
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (!wrapper.contains(e.target)) wrapper.classList.remove('open');
+  });
+  // Keyboard (basic): open/close, navigate with arrows, select with Enter
+  let idx = select.selectedIndex;
+  toggle.addEventListener('keydown', (e) => {
+    const items = Array.from(menu.children);
+    if (e.key === 'ArrowDown') { e.preventDefault(); wrapper.classList.add('open'); idx = Math.min(idx + 1, items.length - 1); items[idx].scrollIntoView({ block: 'nearest' }); items.forEach(el => el.removeAttribute('aria-selected')); items[idx].setAttribute('aria-selected', 'true'); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); wrapper.classList.add('open'); idx = Math.max(idx - 1, 0); items[idx].scrollIntoView({ block: 'nearest' }); items.forEach(el => el.removeAttribute('aria-selected')); items[idx].setAttribute('aria-selected', 'true'); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (wrapper.classList.contains('open')) { items[idx].dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); } else { wrapper.classList.add('open'); } }
+    else if (e.key === 'Escape') { wrapper.classList.remove('open'); }
+  });
+
+  // Insert into DOM after the select
+  select.parentNode.insertBefore(wrapper, select.nextSibling);
+  wrapper.appendChild(toggle);
+  wrapper.appendChild(chevron);
+  wrapper.appendChild(menu);
+
+  // Return handles if needed later
+  return { wrapper, toggle, menu };
+}
+
+// Enhance all selects we want styled the same
+document.querySelectorAll('select.js-map-select').forEach(enhanceSelect);
+
+/* ===== Measure selector behavior (unchanged logic) ===== */
+document.getElementById('measure-select').addEventListener('change', (e) => {
+  currentMeasure = e.target.value;
+  if (geojsonLayer) geojsonLayer.setStyle(style);
+  info.update();
+});
+
+/* ===== Combined Zoom + Home (bottom-right) ===== */
+const ZoomHomeControl = L.Control.extend({
+  options: { position: 'bottomright', homeView: { center: [52, 10], zoom: 4 } },
+  onAdd: function (map) {
+    const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control zoom-home');
+    const mkBtn = (html, title, className, onClick) => {
+      const a = L.DomUtil.create('a', className, container);
+      a.href = '#'; a.title = title; a.innerHTML = html;
+      L.DomEvent.on(a, 'click', L.DomEvent.stop)
+                .on(a, 'click', onClick, this)
+                .on(a, 'dblclick', L.DomEvent.stop);
+      return a;
+    };
+    mkBtn('+', 'Zoom in', 'zoom-in-btn', () => map.zoomIn());
+    mkBtn('−', 'Zoom out', 'zoom-out-btn', () => map.zoomOut());
+    mkBtn(
+      '<span class="home" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/></svg></span>',
+      'Reset map view',
+      'home-btn',
+      () => { map.setView(this.options.homeView.center, this.options.homeView.zoom);
+              if (typeof resetAllHighlights === 'function') resetAllHighlights();
+              if (typeof info?.update === 'function') info.update(); }
+    );
+    L.DomEvent.disableClickPropagation(container);
+    L.DomEvent.disableScrollPropagation(container);
+    return container;
+  }
+});
+map.addControl(new ZoomHomeControl({ position: 'bottomright', homeView: { center: [52, 10], zoom: 4 } }));
+</script>
+</body>
+</html>
