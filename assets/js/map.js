@@ -4,7 +4,7 @@
   /* ================================
      Constants & utils
      ================================ */
-  const DATA_PATH = '/assets/data/';   // change in one place if folder moves
+  const DATA_PATH = 'assets/data/';   // change in one place if folder moves
   const FILES = {
     countries: DATA_PATH + 'world-countries.json',
     geojson:   DATA_PATH + 'nuts3-copy.geojson',
