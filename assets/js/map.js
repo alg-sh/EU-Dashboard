@@ -141,13 +141,14 @@
 
   /* ================================
      Title: update dynamically from state
-     ================================ */
+     ================================ 
   function updateMapTitle() {
-    const el = document.getElementById('map-title');
+   const el = document.getElementById('map-title');
     if (!el) return;
     const base = measureNames[currentMeasure] || '';
     el.textContent = base.endsWith('%)') ? base : `${base} (%)`;
   }
+  */
 
   /* ================================
      Load CSV + GeoJSON (defensive)
@@ -187,7 +188,7 @@
       .then(data => {
         geojsonLayer = L.geoJson(data, { style, onEachFeature }).addTo(map);
         allRegionNames = data.features.map(f => f.properties.NUTS_NAME).filter(Boolean);
-        updateMapTitle(); // set title after data is ready
+        // updateMapTitle(); // set title after data is ready
       })
       .catch(err => {
         console.error(err);
