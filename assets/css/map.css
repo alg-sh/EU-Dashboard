@@ -3,17 +3,17 @@
    ================================ */
 @font-face {
   font-family: 'BeausiteClassicWeb';
-  src: url('/assets/fonts/BeausiteClassicWeb-Clear.woff2') format('woff2');
+  src: url('../fonts/BeausiteClassicWeb-Clear.woff2') format('woff2');
   font-weight: 400; font-style: normal; font-display: swap;
 }
 @font-face {
   font-family: 'BeausiteClassicWeb';
-  src: url('/assets/fonts/BeausiteClassicWeb-Medium.woff2') format('woff2');
+  src: url('../fonts/BeausiteClassicWeb-Medium.woff2') format('woff2');
   font-weight: 500; font-style: normal; font-display: swap;
 }
 @font-face {
   font-family: 'BeausiteClassicWeb';
-  src: url('/assets/fonts/BeausiteClassicWeb-Semibold.woff2') format('woff2');
+  src: url('../fonts/BeausiteClassicWeb-Semibold.woff2') format('woff2');
   font-weight: 700; font-style: normal; font-display: swap;
 }
 
