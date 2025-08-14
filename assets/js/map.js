@@ -142,13 +142,12 @@
   /* ================================
      Title: update dynamically from state
      ================================ 
+   */
+  
   function updateMapTitle() {
-   const el = document.getElementById('map-title');
-    if (!el) return;
-    const base = measureNames[currentMeasure] || '';
-    el.textContent = base.endsWith('%)') ? base : `${base} (%)`;
+   // Title updates intentionally disabled — add logic here to re-enable
   }
-  */
+
 
   /* ================================
      Load CSV + GeoJSON (defensive)
