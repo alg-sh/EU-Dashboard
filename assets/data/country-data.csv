@@ -1,0 +1,48 @@
+CNTR_CODE,CNTR_NAME,LEVEL_CODE,forgottenVoters,willingnessPay,renewableSupport
+AL,Albania,0,47,60,41
+AD,Andorra,0,3,36,23
+AT,Austria,0,11,20,59
+BY,Belarus,0,66,34,92
+BE,Belgium,0,61,51,13
+BA,Bosnia and Herzegovina,0,77,39,15
+BG,Bulgaria,0,18,49,30
+CH,Switzerland,0,26,24,29
+CY,Cyprus,0,42,5,7
+CZ,Czechia,0,27,43,94
+DE,Germany,0,42,57,13
+DK,Denmark,0,24,23,22
+EE,Estonia,0,86,67,4
+EL,Greece,0,72,95,74
+ES,Spain,0,15,9,85
+FI,Finland,0,70,72,82
+FR,France,0,39,73,2
+HR,Croatia,0,27,55,96
+HU,Hungary,0,78,84,30
+IE,Ireland,0,55,0,45
+IS,Iceland,0,96,64,80
+IT,Italy,0,18,91,72
+LI,Liechtenstein,0,46,14,53
+LT,Lithuania,0,71,85,12
+LU,Luxembourg,0,22,26,46
+LV,Latvia,0,63,88,82
+MC,Monaco,0,80,1,51
+MD,Moldova,0,14,29,94
+ME,Montenegro,0,31,51,27
+MK,North Macedonia,0,71,75,71
+MT,Malta,0,16,66,5
+NL,Netherlands,0,73,70,43
+False,Norway,0,10,35,44
+PL,Poland,0,90,12,10
+PT,Portugal,0,22,37,100
+RO,Romania,0,71,7,38
+RS,Serbia,0,73,54,33
+RU,Russia,0,90,76,50
+SE,Sweden,0,43,10,79
+SI,Slovenia,0,76,38,96
+SK,Slovakia,0,20,28,18
+SM,San Marino,0,64,69,81
+TR,Turkey,0,35,62,13
+UA,Ukraine,0,5,90,53
+UK,United Kingdom,0,88,98,53
+VA,Vatican,0,59,24,62
+XK,Kosovo,0,88,16,77

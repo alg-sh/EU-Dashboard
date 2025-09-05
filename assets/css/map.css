@@ -21,148 +21,728 @@
    Global + App namespace
    ================================ */
 html, body { font-family: 'BeausiteClassicWeb', Arial, sans-serif !important; }
-body { margin: 0; background: #2A192C; color: #fff; }
+body { margin: 0; background: #260E26; color: #fff; }
 .leaflet-container, .leaflet-control { font-family: inherit !important; }
 
-.map-app #map { height: 100vh; }
-.map-app .map-card { background: rgba(42,25,44,0.85); }
+/* App shell + design tokens scoped to the dashboard */
+.map-app {
+  position: relative;
+  min-height: 100vh;
+  z-index: 0;
+
+  /* Layout */
+  --header-clear: 9rem;      /* matches HEADER_CLEAR in page.js */
+  --page-pad: 1.5rem;        /* matches <main> side padding */
+
+  /* Type (base, labels, controls, title) */
+  --font-body: 1rem;         /* 16px */
+  --font-label: 0.875rem;    /* 14px */
+  --font-control: 0.9375rem; /* 15px */
+  --font-title: clamp(1.375rem, 1rem + 1.2vw, 2rem); /* ~22–32px */
+
+  /* Map controls (zoom/home) */
+  --zoom-size: clamp(2.25rem, 2.2vw, 2.75rem);   /* ~36–44px touch target */
+  --zoom-font: clamp(1rem, 0.5rem + 1vw, 1.25rem);
+  --zoom-radius: 10px;
+  
+  /* Legend and tooltip */
+--font-legend: 0.75rem;         /* 12px */
+--font-tooltip: 0.875rem;       /* 14px */
+--font-tip-title: 0.9375rem;    /* 15px – slightly larger than body */
+
+  /* Hover info */
+  --font-hover-body: 0.9375rem;                              /* 15px */
+  --font-hover-name: clamp(1rem, 0.95rem + 0.4vw, 1.125rem); /* ~16–18px */
+}
+
+/* Viewport-height custom prop used elsewhere */
+@supports (height: 100dvh) { .map-app { --vh: 100dvh; } }
+@supports not (height: 100dvh) { .map-app { --vh: 100vh; } }
+
+
 
 /* ================================
-   Shared input look (closed-state)
+   Left Panel + Layout (base visuals)
    ================================ */
-.map-app .map-ui-input {
+#side-panel.map-side {
+  padding: 16px;              /* inner spacing for the panel content */
+  border-radius: 18px;        /* rounded corners for the panel */
+  background: #260E26;        /* panel background color */
+  z-index: 500;               /* above the map canvas, below floating UI */
+  display: flex;              /* vertical stack of panel sections */
+  flex-direction: column;     /* stack children top → bottom */
+  gap: 16px;                  /* space between sections */
+  overflow-y: auto;           /* scroll if content gets tall */
+}
+
+/* ================================
+   Panel title (text styling)
+   ================================ */
+.panel-title {
+  position: relative;         /* establishes containing block for ::after underline */
+  margin: 0 0 16px 0;         /* space below the title */
+  line-height: 1.1;           /* tight heading leading */
+  font-weight: 700;           /* bold */
+  font-size: var(--font-title);         /* heading size */
+  color: #ffffff;             /* TITLE COLOR (mint) — recoloring the text */
+  display: inline-block;      /* shrink to text width so the underline matches the title */
+}
+
+/* ================================
+   Title underline (accent bar)
+   ================================ */
+.panel-title::after {
+  content: "";
+  position: absolute;         /* position relative to .panel-title */
+  left: 0;
+  bottom: -8px;               /* gap between text and line */
+  width: 100%;                /* exactly the title width */
+  height: 2px;                /* thin line */
+  background: #A1FCC2;        /* UNDERLINE COLOR — recoloring the line */
+  border-radius: 2px;         /* soft edges */
+  display: block;
+}
+
+/* Prevent flexbox from stretching the title to full panel width */
+#side-panel.map-side .panel-title {
+  align-self: flex-start;
+}
+
+/* ================================
+   Section blocks inside the panel
+   ================================ */
+.panel-section { margin: 0; }
+
+/* ================================
+   Filters (now INSIDE the panel)
+   ================================ */
+#filters {
+  position: static;             /* no absolute positioning */
+  padding: 0;
+  background: transparent;
+  min-width: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: var(--font-label);
+}
+
+/* Make the Country block use the exact same internal layout as #filters */
+#filters-country {
+  position: static;
+  padding: 0;
+  background: transparent;
+  min-width: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;                   /* <- same vertical rhythm as the other two controls */
+  font-size: var(--font-label);
+}
+
+/* Ensure full-width control in that block (matches others) */
+#filters-country .map-select { width: 100%; }
+
+#filters label { 
+  display: block; 
+  font-weight: 500; 
+  color: #BCA3BE;
+  font-size: var(--font-label);
+}
+
+/* Ensure labels in any panel section look like the filters block */
+#side-panel .panel-section label {
+  display: block;
+  font-weight: 500;
+  color: #BCA3BE;
+  font-size: var(--font-label);  /* match #filters labels */
+}
+
+/* Make country-select section use same spacing as #filters */
+#side-panel .panel-section select.js-map-select {
+  width: 100%;
+}
+/* Make the custom select wrapper fill the panel width */
+#side-panel .map-select {
+  display: block;
+  width: 100%;
+}
+
+/* Hard-normalize typography + rendering for ALL enhanced selects */
+#side-panel .map-select__toggle {
+  appearance: none;
+  -webkit-appearance: none;
+
+  /* one-shot, identical metrics to inputs (wins over UA defaults) */
+  font: 400 var(--font-control)/1.25 'BeausiteClassicWeb', Arial, sans-serif !important;
+  letter-spacing: 0;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+
+/* Keep inputs and enhanced selects visually identical in the panel */
+#side-panel .panel-section .map-ui-input,
+#side-panel .panel-section .map-select__toggle {
+  padding: 7px 10px;     /* your current control padding */
+  border-radius: 4px;    /* your current control radius */
+  width: 100%;
+}
+
+/* Custom select (enhancer output) */
+.map-select { position: relative; }
+.map-select__toggle {
+  background: #6E5F6F; color: #fff; font-family: inherit; font-size: var(--font-control);
+  font-weight: 400; border: none; border-radius: 4px; padding: 7px 10px; width: 100%;
+  text-align: left; cursor: pointer;
+}
+.map-select__toggle:focus { outline: none; box-shadow: 0 0 6px 1px rgba(255,255,255,0.15); }
+.map-select__chevron {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; opacity: 0.8;
+}
+.map-select__menu {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 1600;
+  display: none; background: rgba(42, 25, 44, 0.98);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 4px;
+  max-height: 240px; overflow-y: auto; font-family: inherit;
+}
+.map-select.open .map-select__menu { display: block; }
+.map-select__option {
+  padding: 6px 8px; border-radius: 4px; cursor: pointer; color: #fff; font-weight: 500;
+}
+.map-select__option:hover,
+.map-select__option[aria-selected="true"] { background: #6E5F6F; }
+
+/* ================================
+   Hover info (INSIDE the panel)
+   ================================ */
+#hover-info {
+  visibility: hidden;
+  font-size: var(--font-hover-body);
+  font-weight: 600;
+  color: #fff;
+  min-height: 2.2em;           /* reduces layout jump */
+}
+
+#hover-info .region-name {
+  color: #A1FCC2;              /* mint */
+  font-size: var(--font-hover-name); 
+  font-weight: 700;
+}
+
+/* Kill any legacy Leaflet .info box if still present */
+.map-app .info { display: none !important; }
+
+.map-app .leaflet-top.leaflet-right {
+  margin-top: 12px;   /* push down from very top */
+  margin-right: 12px; /* spacing from right edge */
+}
+
+/* ================================
+   Search (stays on the map, bottom-right)
+   ================================ */
+#search-region {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  left: auto;
+  z-index: 1600;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  min-width: 220px;
+}
+
+/* Make the input box render cleanly (no cut text/border) */
+.map-app #search-region .map-ui-input {
+  display: block;
+  width: 260px;          /* or 100% if you give #search-region a fixed width */
+  height: 36px;          /* consistent box height */
+  line-height: 1.2;      /* avoid clipping the text baseline */
+  padding: 6px 12px;     /* inside spacing without overflow */
+  box-sizing: border-box;
+  border: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Shared input look */
+.map-ui-input {
   background: #6E5F6F;
   color: #fff;
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--font-control);
   font-weight: 400;
   border: none;
   border-radius: 4px;
   padding: 7px 10px;
   width: 100%;
 }
-.map-app .map-ui-input::placeholder { color: #fff; opacity: 1; }
-.map-app .map-ui-input:focus {
+.map-ui-input::placeholder { color: #fff; opacity: 1; }
+.map-ui-input:focus {
   outline: none;
   box-shadow: 0 0 6px 1px rgba(255,255,255,0.15);
   background-color: #6E5F6F;
 }
 
-/* ================================
-   Layout
-   ================================ */
-.map-app #filters {
-  position: absolute; top: 10px; left: 10px; z-index: 1000;
-  padding: 10px; border-radius: 6px; min-width: 220px;
-  display: flex; flex-direction: column; gap: 8px;
-  font-size: 0.9em; /* a bit smaller per your request */
-}
-.map-app #filters label { display: block; font-weight: 600; }
-
-.map-app #map-title {
-  position: absolute;
-  top: 10px; left: 50%; transform: translateX(-50%);
-  z-index: 1100; pointer-events: none;
-  font-size: 1.8em; font-weight: 700; line-height: 1.2;
-  color: #fff; text-align: center;
-}
-
-.map-app #search-region {
-  position: absolute; bottom: 10px; left: 10px; z-index: 1000;
-  background: none; padding: 0; border-radius: 0; min-width: auto;
-}
-
-/* ================================
-   Custom autocomplete (replaces <datalist>)
-   ================================ */
-.map-app #region-ac {
-  position: absolute; left: 10px; bottom: 56px; z-index: 1500;
-  width: calc(220px - 20px); max-height: 220px; overflow-y: auto;
-  display: none; background: rgba(42, 25, 44, 0.98);
-  border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 4px;
+/* Autocomplete dropdown (JS positions it; ensure above map) */
+#region-ac {
+  position: fixed;
+  z-index: 1500;
+  display: none;
+  background: rgba(42, 25, 44, 0.98);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  padding: 4px;
+  max-height: 240px;
+  overflow-y: auto;
   font-family: inherit;
 }
-.map-app #region-ac div {
+#region-ac div {
   padding: 6px 8px; border-radius: 4px; cursor: pointer; color: #fff; font-weight: 500;
 }
-.map-app #region-ac div:hover,
-.map-app #region-ac div[aria-selected="true"] { background: #6E5F6F; }
-
-/* ================================
-   Custom Select (enhanced native select)
-   ================================ */
-.map-app .map-select { position: relative; }
-.map-app .map-select__toggle {
-  background: #6E5F6F; color: #fff; font-family: inherit; font-size: 0.95em;
-  font-weight: 400; border: none; border-radius: 4px; padding: 5px 10px; width: 100%;
-  text-align: left; cursor: pointer;
-}
-.map-app .map-select__toggle:focus { outline: none; box-shadow: 0 0 6px 1px rgba(255,255,255,0.15); }
-.map-app .map-select__toggle:focus-visible { outline: 2px solid #A1FCC2; outline-offset: 2px; }
-
-.map-app .map-select__chevron {
-  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-  pointer-events: none; opacity: 0.8;
-}
-.map-app .map-select__menu {
-  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 1600;
-  display: none; background: rgba(42, 25, 44, 0.98);
-  border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 4px;
-  max-height: 240px; overflow-y: auto; font-family: inherit;
-}
-.map-app .map-select.open .map-select__menu { display: block; }
-.map-app .map-select__option {
-  padding: 5px 8px; border-radius: 4px; cursor: pointer; color: #fff; font-weight: 500;
-}
-.map-app .map-select__option:hover,
-.map-app .map-select__option[aria-selected="true"] { background: #6E5F6F; }
-
-/* ================================
-   Info box (top-right)
-   ================================ */
-.map-app .info {
-  background: rgba(42, 25, 44, 0.9);
-  padding: 8px 12px; border-radius: 6px; font-size: 15px;
-  position: absolute; top: 10px; right: 10px; min-width: 240px;
-  pointer-events: none; z-index: 1100; font-weight: 700;
-}
-.map-app .info .region-name { color: #A1FCC2; font-size: 1.1em; }
+#region-ac div:hover,
+#region-ac div[aria-selected="true"] { background: #6E5F6F; }
 
 /* ================================
    Leaflet background
    ================================ */
-.map-app .leaflet-container { background: #2A192C; }
+.leaflet-container { background: #260E26; }
 
 /* ================================
-   Combined Zoom + Home (bottom-right)
+   Zoom + Home buttons (top-right by Leaflet control)
    ================================ */
-.map-app .zoom-home a {
-  background: #6E5F6F; color: #fff; width: 34px; height: 34px; line-height: 34px;
+.zoom-home a {
+  background: #6E5F6F; 
+  color: #fff; 
+  width: 34px; 
+  height: 34px; 
+  line-height: 34px;
   text-align: center; font-weight: 700;
 }
-.map-app .zoom-home .zoom-in-btn, 
-.map-app .zoom-home .zoom-out-btn { font-size: 20px; line-height: 34px; }
+.zoom-home .zoom-in-btn, 
+.zoom-home .zoom-out-btn {   
+  font-size: var(--zoom-font);
+  line-height: var(--zoom-size); 
+}
+.zoom-home a:hover { filter: brightness(0.7); }
+.zoom-home .home svg { width: 16px; height: 16px; vertical-align: middle; }
 
-/* Prevent white focus, only darken on hover */
+/* Prevent sticky white/clear background after click */
+.zoom-home a:focus,
+.zoom-home a:active {
+  background: #6E5F6F;  /* same as normal state */
+  color: #fff;          /* keep text/icon visible */
+  outline: none;        /* remove default focus ring */
+  box-shadow: none;     /* remove any glow */
+}
+
+/* ================================
+   Small screens (legacy adjustments)
+   ================================ */
+@media (max-width: 600px) {
+  #side-panel.map-side { padding: 14px; }
+  .map-app { --font-title: clamp(1.25rem, 1rem + 1vw, 1.75rem); }
+}
+
+/* ================================
+   Nice scrollbars (optional)
+   ================================ */
+#region-ac::-webkit-scrollbar,
+.map-select__menu::-webkit-scrollbar { width: 8px; }
+#region-ac::-webkit-scrollbar-track,
+.map-select__menu::-webkit-scrollbar-track { background: rgba(255,255,255,0.06); border-radius: 8px; }
+#region-ac::-webkit-scrollbar-thumb,
+.map-select__menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 8px; }
+#region-ac::-webkit-scrollbar-thumb:hover,
+.map-select__menu::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.35); }
+
+/* Firefox */
+#region-ac,
+.map-select__menu {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.35) rgba(255,255,255,0.06);
+}
+
+/* Make Leaflet zoom/home buttons keep our dark look in ALL states */
 .map-app .leaflet-bar.zoom-home a,
+.map-app .leaflet-bar.zoom-home a:hover,
 .map-app .leaflet-bar.zoom-home a:focus,
 .map-app .leaflet-bar.zoom-home a:active,
 .map-app .leaflet-bar.zoom-home a:focus-visible,
 .map-app .leaflet-bar.zoom-home a.leaflet-disabled,
 .map-app .leaflet-bar.zoom-home a.leaflet-disabled:hover {
-  background: #6E5F6F !important; color: #fff !important; outline: none !important;
-  box-shadow: none !important; filter: none !important;
+  background: #6E5F6F !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+   width: var(--zoom-size);
+  height: var(--zoom-size);
+  line-height: var(--zoom-size);
+  text-align: center;
+  font-weight: 700;
+  border-radius: var(--zoom-radius);
+  -webkit-tap-highlight-color: transparent; /* kill iOS/Chrome gray flash */
 }
-.map-app .leaflet-bar.zoom-home a:hover,
-.map-app .leaflet-bar.zoom-home a:focus:hover,
-.map-app .leaflet-bar.zoom-home a:active:hover { filter: brightness(0.8) !important; }
-.map-app .zoom-home a + a { border-top: 1px solid rgba(255,255,255,0.2); }
-.map-app .zoom-home .home svg { width: 16px; height: 16px; vertical-align: middle; display: inline-block; }
 
-/* ================================
-   Small screens
-   ================================ */
-@media (max-width: 480px) {
-  .map-app #map-title { font-size: 1.5em; }
-  .map-app #filters { font-size: 0.85em; }
+/* Only darken on hover (mouse) */
+.map-app .leaflet-bar.zoom-home a:hover {
+  filter: brightness(0.9) !important;
+}
+
+/* Make sure the dropdown sits over any input glow */
+.map-app #region-ac {
+  margin: 0;                 /* no stray spacing */
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+}
+
+/* Reduce the input glow so there’s no 'gap' halo */
+.map-app .map-ui-input:focus {
+  outline: none;
+  box-shadow: 0 0 4px 0 rgba(255,255,255,0.12); /* smaller & softer */
+  background-color: #6E5F6F;
+}
+
+/* Legend */
+.legend { display: grid; row-gap: 8px; }
+.legend__title { font-size: var(--font-legend); color: #BCA3BE; }
+.legend__value { font-size: var(--font-legend); color: #ffffff; white-space: nowrap; }
+
+.legend__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.legend__scale {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* matches number of palette steps */
+  gap: 0px;
+  flex: 1; /* stretch to take available space */
+}
+
+.legend__swatch {
+  height: 15px;
+  border-radius: 0px;
+}
+
+.legend__value {
+  font-size: var(--font-legend);
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.leaflet-control-zoom-home .zh-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  pointer-events: none; /* so clicks go through to the button */
+}
+
+/* On-map tooltip */
+.leaflet-tooltip.map-tip {
+  background:  rgba(42, 25, 44, 0.98);
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  font-size: var(--font-tooltip);
+  line-height: 1.25;
+}
+.map-tip .tip-title {
+  color: #A1FCC2;   
+  font-weight: 600; 
+  font-size: var(--font-tip-title);
+
+}
+
+.map-tip .tip-row { display: flex; gap: 8px; align-items: baseline; }
+.map-tip .tip-m { opacity: 0.85; }
+.map-tip .tip-v { margin-left: auto; font-weight: 600; }
+.map-tip .tip-spark { display: block; margin-top: 4px; }
+
+.map-tip .tip-delta {
+  margin-top: 2px;
+  font-size: var(--font-tooltip);
+  line-height: 1.2;
+  color:#c6c6c6
+}
+
+.leaflet-tooltip.map-tip::before,
+.leaflet-tooltip.map-tip::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Kill the iOS/Safari tap highlight on the map + controls */
+#map,
+.leaflet-container,
+.leaflet-control a,
+.map-select__toggle {
+  -webkit-tap-highlight-color: transparent; /* iOS Safari */
+}
+
+/* Also suppress default outlines on mouse/touch,
+   but keep keyboard focus rings via :focus-visible */
+.leaflet-container:focus,
+.leaflet-control a:focus,
+.map-select__toggle:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.leaflet-container:focus-visible,
+.leaflet-control a:focus-visible,
+.map-select__toggle:focus-visible {
+  /* If you prefer a subtle brand ring instead of none, swap these two lines: */
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Some browsers draw a box-shadow focus ring on anchors; neutralize it */
+.leaflet-control a {
+  box-shadow: none !important;
+}
+
+/* Chrome/Webkit: remove their internal focus highlight */
+.leaflet-container,
+.leaflet-control a {
+  -webkit-tap-highlight-color: transparent; /* Safari/iOS */
+  outline: none !important;
+}
+
+/* Idle map: custom grab cursor (with PNG fallback) */
+.leaflet-container {
+  cursor: url("../cursors/grab.svg") 16 16, url("../cursors/grab.png") 16 16, grab !important;
+}
+.leaflet-dragging .leaflet-container {
+  cursor: url("../cursors/grabbing.svg") 16 16, url("../cursors/grabbing.png") 16 16, grabbing !important;
+}
+
+/* Hover / Click (triggered by JS adding classes to <body>) */
+body.cursor-hover,
+body.cursor-hover * {
+  cursor: url("../cursors/hover.svg") 6 2, url("../cursors/hover.png") 6 2, pointer !important;
+}
+body.cursor-click,
+body.cursor-click * {
+  cursor: url("../cursors/click.svg") 6 2, url("../cursors/click.png") 6 2, pointer !important;
+}
+
+/* === Cursor override (strong selectors) === */
+html body #map.cursor-hover,
+html body #map.cursor-hover * ,
+html body #map.cursor-hover .leaflet-pane,
+html body #map.cursor-hover .leaflet-pane * ,
+html body #map.cursor-hover canvas {
+  cursor: url("/assets/cursors/hover.svg") 6 2, url("/assets/cursors/hover.png") 6 2, pointer !important;
+}
+html body #map.cursor-click,
+html body #map.cursor-click * ,
+html body #map.cursor-click .leaflet-pane,
+html body #map.cursor-click .leaflet-pane * ,
+html body #map.cursor-click canvas {
+  cursor: url("/assets/cursors/click.svg") 6 2, url("/assets/cursors/click.png") 6 2, pointer !important;
+}
+
+/* Global cursor override while hovering/clicking a region */
+body.cursor-hover,
+body.cursor-hover * {
+  cursor: url("/assets/cursors/hover.svg") 6 2, url("/assets/cursors/hover.png") 6 2, pointer !important;
+}
+body.cursor-click,
+body.cursor-click * {
+  cursor: url("/assets/cursors/click.svg") 6 2, url("/assets/cursors/click.png") 6 2, pointer !important;
+}
+
+/* === Custom cursor sprite (robust across Canvas/SVG) === */
+#map .map-cursor {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  transform: translate(-6px, -2px); /* hotspot offset */
+  z-index: 9999;
+  display: none;
+}
+
+/* Hide system cursor while our sprite is visible */
+#map.cursor-none,
+#map.cursor-none * {
+  cursor: none !important;
+}
+
+/* === Responsive grid layout for dashboard === */
+.map-app { --header-clear: 9rem; } /* harmless duplicate to keep prior structure */
+@supports (height: 100dvh) { .map-app { --vh: 100dvh; } }
+@supports not (height: 100dvh) { .map-app { --vh: 100vh; } }
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: clamp(260px, 24vw, 360px) 1fr;
+  gap: 12px;
+  min-height: calc(var(--vh) - var(--header-clear));
+}
+
+.map-wrap { position: relative; }
+#map { width: 100%; height: 100%; }
+
+/* DESKTOP/TABLET: panel behaves like a sticky column */
+#side-panel.map-side {
+  position: sticky;
+  top: 10px;
+  align-self: start;
+  height: calc(var(--vh) - var(--header-clear) - 20px);
+  overflow: auto;
+  z-index: 500;
+}
+
+/* Keep your existing on-map controls */
+#search-region { position: absolute; right: 16px; bottom: 16px; z-index: 1600; }
+
+/* Hide the mobile toggle on desktop by default */
+.map-app.in-view .panel-toggle { 
+  display: none !important;
+}
+
+
+/* MOBILE/TABLET: stack sidebar ABOVE the map (no pill, no bottom sheet) */
+@media (max-width: 1024px) {
+  .dash-grid { 
+    grid-template-columns: 1fr; 
+    gap: 12px;
+  }
+
+  /* Sidebar becomes a normal block at the top */
+  #side-panel.map-side {
+    position: static;         /* no sticky/fixed */
+    top: auto;
+    height: auto;             /* grow with content */
+    max-height: none;
+    transform: none;          /* neutralize any old bottom-sheet transforms */
+    border-radius: 18px;      /* keep your rounded look */
+    margin: 0 0 12px 0;       /* space above the map */
+    z-index: auto;
+    background: #260E26;      /* your existing panel bg */
+  }
+
+  /* Map still gets a healthy minimum height on small screens */
+  #map { 
+    min-height: 60dvh; 
+    height: auto;             /* let the grid control height */
+  }
+
+  /* Never show the old pill on mobile (belt & braces) */
+  .panel-toggle { 
+    display: none !important; 
+  }
+
+  /* Any legacy “sheet open” spacing becomes a no-op */
+  .map-app.panel-open .map-wrap { padding-bottom: 0 !important; }
+  .map-app.panel-open #search-region { bottom: 16px !important; }
+}
+
+/* Let page scroll vertically when finger is over the map (mobile/tablet) */
+@media (pointer: coarse), (max-width: 1024px) {
+  .leaflet-container {
+    touch-action: pan-y !important; /* allow vertical pan to bubble to page */
+  }
+}
+
+/* Mobile/tablet: match the dashboard’s small-screen rhythm */
+@media (max-width: 1024px) {
+  #eu-home-map {
+    min-height: 60dvh;  /* dashboard uses this for its map on small screens */
+    height: auto;
+  }
+}
+
+
+/* === Panel left / Map right === */
+.dash-grid {
+  display: grid;
+  grid-template-columns: clamp(280px, 24vw, 380px) 1fr;
+  gap: 24px;
+  align-items: start;
+  padding: 16px;
+}
+
+.map-wrap { position: relative; }
+
+/* Give the map a real height */
+#map {
+  height: calc(100svh - 140px);
+  min-height: 520px;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+/* Keep the panel visible while scrolling */
+#side-panel.map-side {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+}
+
+/* Stack on smaller screens */
+@media (max-width: 1200px) {
+  .dash-grid { grid-template-columns: 1fr; }
+  #map { height: 100%; min-height: 420px; }
+}
+
+/* --- Leaflet safety: don't let global img rules squash tiles --- */
+.leaflet-container img,
+.leaflet-container canvas {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* --- Remove default page margin so vh math is exact --- */
+html, body { height: 100%; margin: 0; }
+
+/* --- Right column behaves as a column; map fills all remaining space --- */
+.map-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: var(--vh);        /* same token you already use */
+}
+
+/* Let the map actually grow in a flex/grid parent */
+#map {
+  flex: 1 1 auto;
+  min-height: 0;                /* critical to prevent cropping in flex/grid */
+  height: auto !important;      /* let flex control height */
+}
+
+/* --- Leaflet safety: don't let global img rules squash tiles --- */
+.leaflet-container img,
+.leaflet-container canvas {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* --- Remove default page margin so vh math is exact --- */
+html, body { height: 100%; margin: 0; }
+
+/* --- Right column behaves as a column; map fills all remaining space --- */
+.map-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: var(--vh);        /* same token you already use */
+}
+
+/* Let the map actually grow in a flex/grid parent */
+#map {
+  flex: 1 1 auto;
+  min-height: 0;                /* critical to prevent cropping in flex/grid */
+  height: auto !important;      /* let flex control height */
 }

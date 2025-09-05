@@ -9,41 +9,73 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <!-- Your CSS (cacheable) -->
-<link rel="stylesheet" href="assets/css/map.css?v=3" />
+  <link rel="stylesheet" href="assets/css/map.css?v=3" />
 </head>
 <body>
-
   <!-- Namespace all UI to avoid CSS collisions -->
   <div class="map-app">
+    <div class="dash-grid">
+      <!-- Left panel (title + filters + hover info) -->
+      <aside id="side-panel" class="map-side" aria-label="Dashboard filters">
+        <h1 class="panel-title">Project Tempo European Dashboard</h1>
 
-    <!-- Filters (top-left) -->
-    <div id="filters" class="map-card">
-      <label for="measure-select">Select Measure:</label>
+        <!-- Filters live INSIDE the panel -->
+        <section id="filters" class="panel-section">
+          <label for="measure-select">Select Indicator</label>
+          <select id="measure-select" class="js-map-select" aria-label="Select Indicator">
+            <option value="forgottenVoters">Forgotten Voters Share (%)</option>
+            <option value="willingnessPay">Willingness to Pay for Climate Action (%)</option>
+            <option value="renewableSupport">Renewable Energy Support (%)</option>
+          </select>
 
-      <!-- Native select kept for semantics; JS enhances it into a custom dropdown -->
-      <select id="measure-select" class="js-map-select" aria-label="Select Measure">
-        <option value="forgottenVoters">Forgotten Voters Share (%)</option>
-        <option value="willingnessPay">Willingness to Pay for Climate Action (%)</option>
-        <option value="renewableSupport">Renewable Energy Support (%)</option>
-      </select>
-    </div>
+          <label for="level-select">Geography Level</label>
+          <select id="level-select" class="js-map-select" aria-label="Geography Level">
+            <option value="3" selected>Finer level (NUTS3)</option>
+            <option value="0">Country</option>
+          </select>
+        </section>
 
-    <!-- Dynamic map title (center top). aria-live announces updates to AT users -->
-    <!--<div id="map-title" aria-live="polite"></div>-->
+        <section id="filters-country" class="panel-section">
+          <label for="country-select">Select Country</label>
+          <select id="country-select" class="js-map-select" aria-label="Select Country">
+            <option value="__all__">All countries</option>
+          </select>
+        </section>
 
-    <!-- Search (bottom-left) -->
-    <div id="search-region">
-      <input id="region-search" class="map-ui-input" placeholder="Type to search" autocomplete="off" />
-    </div>
+        <!-- Legend -->
+        <section class="panel-section" id="legend-container" aria-live="polite">
+          <div id="legend" class="legend">
+            <!-- JS fills this -->
+          </div>
+        </section>
 
-    <!-- Custom autocomplete dropdown (replaces <datalist>) -->
-    <div id="region-ac" role="listbox" aria-label="Regions"></div>
+        <!-- Hover info -->
+        <section id="hover-info" class="panel-section" aria-live="polite">
+          Hover over a region
+        </section>
+      </aside>
 
-    <!-- Map -->
-    <div id="map" role="region" aria-label="Interactive map of EU NUTS3 regions"></div>
-  </div>
+      <!-- Right column: map + search UI -->
+      <div class="map-wrap">
+        <div id="map" role="region" aria-label="Interactive map of EU NUTS3 regions"></div>
 
-  <!-- Vendor JS (loaded before your code) -->
+        <!-- Search (bottom-right on the map) -->
+        <div id="search-region">
+          <input
+            id="region-search"
+            class="map-ui-input"
+            placeholder="Type to search"
+            autocomplete="off"
+          />
+        </div>
+
+        <!-- Custom autocomplete dropdown -->
+        <div id="region-ac" role="listbox" aria-label="Regions"></div>
+      </div> <!-- /.map-wrap -->
+    </div> <!-- /.dash-grid -->
+  </div> <!-- /.map-app -->
+
+  <!-- Vendor JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
