@@ -542,24 +542,24 @@ html body #map.cursor-hover * ,
 html body #map.cursor-hover .leaflet-pane,
 html body #map.cursor-hover .leaflet-pane * ,
 html body #map.cursor-hover canvas {
-  cursor: url("/assets/cursors/hover.svg") 6 2, url("/assets/cursors/hover.png") 6 2, pointer !important;
+  cursor: url("assets/cursors/hover.svg") 6 2, url("assets/cursors/hover.png") 6 2, pointer !important;
 }
 html body #map.cursor-click,
 html body #map.cursor-click * ,
 html body #map.cursor-click .leaflet-pane,
 html body #map.cursor-click .leaflet-pane * ,
 html body #map.cursor-click canvas {
-  cursor: url("/assets/cursors/click.svg") 6 2, url("/assets/cursors/click.png") 6 2, pointer !important;
+  cursor: url("assets/cursors/click.svg") 6 2, url("assets/cursors/click.png") 6 2, pointer !important;
 }
 
 /* Global cursor override while hovering/clicking a region */
 body.cursor-hover,
 body.cursor-hover * {
-  cursor: url("/assets/cursors/hover.svg") 6 2, url("/assets/cursors/hover.png") 6 2, pointer !important;
+  cursor: url("assets/cursors/hover.svg") 6 2, url("assets/cursors/hover.png") 6 2, pointer !important;
 }
 body.cursor-click,
 body.cursor-click * {
-  cursor: url("/assets/cursors/click.svg") 6 2, url("/assets/cursors/click.png") 6 2, pointer !important;
+  cursor: url("assets/cursors/click.svg") 6 2, url("assets/cursors/click.png") 6 2, pointer !important;
 }
 
 /* === Custom cursor sprite (robust across Canvas/SVG) === */

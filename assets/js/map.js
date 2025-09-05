@@ -4,7 +4,7 @@
   /* ================================
      Paths & dataset config
      ================================ */
-  const DATA_PATH = '/assets/data/';
+  const DATA_PATH = 'assets/data/';
   const FILES = {
     // Background silhouette (kept as-is)
     countriesSilhouette: DATA_PATH + 'world-countries.json',
