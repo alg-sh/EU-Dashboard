@@ -540,6 +540,16 @@ function cleanup() {
         updateHoverInfo();
       });
     });
+    
+    // Kick off the initial data load + first paint
+ensureLevelLoaded(currentLevel, () => {
+  populateCountrySelectFromStore(currentLevel);
+  rebuildLayer();
+  updateHoverInfo();
+  zoomToCurrentFilter();
+  syncUrl(false); // keep ?indicator=... in URL without pushing history
+});
+
   }
 
   // Load both levels. First paint = NUTS3.
