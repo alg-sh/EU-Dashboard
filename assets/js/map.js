@@ -81,7 +81,7 @@
   /* ================================
      Palette & measure labels
      ================================ */
-  const palette = ['#cde2e2', '#82b6b6', '#307c7b', '#004141'];
+  const palette = ['#82b6b6', '#6b9d9dff', '#307c7b', '#004141'];
   const measureNames = {
     forgottenVoters: 'Forgotten Voters Share',
     willingnessPay:  'Willingness to Pay for Climate Action',

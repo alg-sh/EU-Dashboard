@@ -243,17 +243,7 @@ body { margin: 0; background: #260E26; color: #fff; }
 /* ================================
    Search (stays on the map, bottom-right)
    ================================ */
-#search-region {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  left: auto;
-  z-index: 1600;
-  background: none;
-  padding: 0;
-  border-radius: 0;
-  min-width: 220px;
-}
+
 
 /* Make the input box render cleanly (no cut text/border) */
 .map-app #search-region .map-ui-input {
@@ -607,7 +597,7 @@ body.cursor-click * {
 }
 
 /* Keep your existing on-map controls */
-#search-region { position: absolute; right: 16px; bottom: 16px; z-index: 1600; }
+#search-region { position: fixed; right: 24px; bottom: 24px; z-index: 1600; }
 
 /* Hide the mobile toggle on desktop by default */
 .map-app.in-view .panel-toggle { 
@@ -746,3 +736,24 @@ html, body { height: 100%; margin: 0; }
   min-height: 0;                /* critical to prevent cropping in flex/grid */
   height: auto !important;      /* let flex control height */
 }
+
+
+/* Kill the default Leaflet control box around the group */
+.map-app .leaflet-bar.zoom-home {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Optional: remove the thin separators Leaflet adds between <a> items */
+.map-app .leaflet-bar.zoom-home a {
+  border: none !important;          /* no inner borders */
+}
+
+/* Optional: tighten the vertical stack spacing (looks like a tidy pill stack) */
+.map-app .leaflet-bar.zoom-home {
+  display: inline-flex;              /* let us control spacing cleanly */
+  flex-direction: column;
+  gap: 0px;                          /* adjust to taste (6–10px) */
+}
+
