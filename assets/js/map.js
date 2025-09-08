@@ -543,28 +543,87 @@ function cleanup() {
   }
 
   // Load both levels. First paint = NUTS3.
-  loadLevel('3', () => {
-    if (currentLevel !== '3') return;
-    populateCountrySelectFromStore('3');
-    applyUrlToState();
+  function loadLevel(level, onReady) {
+  if (!LEVELS[level]) return;
+  const LCFG = LEVELS[level];
+  const S = store[level];
 
-    // reflect selects (no dispatch)
-    if (measureSelect) measureSelect.value = currentMeasure;
-    if (countrySelect) {
-      const S = store['3'];
-      const exists = !!(currentCountry && currentCountry !== '__all__' && S.countryIndex[currentCountry]);
-      countrySelect.value = exists ? currentCountry : '__all__';
-      if (!exists) currentCountry = '__all__';
-      if (typeof syncWrappedSelectLabel === 'function') syncWrappedSelectLabel(countrySelect);
+  // If already loaded, short-circuit
+  if (S.loaded && S.geoData && Object.keys(S.dataById).length) {
+    onReady && onReady();
+    return;
+  }
+
+  // CSV promise (worker + fast mode)
+  const csvP = new Promise((resolve, reject) => {
+    Papa.parse(LCFG.csv, {
+      download: true,
+      header: true,
+      worker: true,          // ✅ parse off main thread
+      fastMode: true,        // ✅ faster tokenizer
+      skipEmptyLines: true,  // ✅ less junk to process
+      dynamicTyping: true,   // optional: numbers as numbers
+      complete: res => resolve(res.data || []),
+      error: reject
+    });
+  });
+
+  // GeoJSON promise
+  const geoP = fetch(LCFG.geo)
+    .then(r => { if (!r.ok) throw new Error('fetch geo ' + level + ' failed: ' + r.status); return r.json(); });
+
+  Promise.all([csvP, geoP]).then(([rows, gj]) => {
+    // — your existing CSV → indices logic —
+    const countryNames = new Set();
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]; if (!row) continue;
+      const id = idFromCsvRow(row, level); if (!id) continue;
+
+      const cn = countryFromCsvRow(row, level);
+      if (cn) {
+        countryNames.add(cn);
+        if (!S.countryIndex[cn]) S.countryIndex[cn] = new Set();
+        S.countryIndex[cn].add(id);
+      }
+
+      S.dataById[id] = {
+        forgottenVoters: num(row.forgottenVoters),
+        willingnessPay:  num(row.willingnessPay),
+        renewableSupport:num(row.renewableSupport),
+        CNTR_NAME: cn || null
+      };
     }
 
-    // build & fit once (no animation)
-    rebuildLayer();
-    zoomToCurrentFilter();
+    // NUTS3 aliasing so the rest of the code can stay uniform
+    if (level === '3' && gj && gj.features && gj.features.length) {
+      for (let k = 0; k < gj.features.length; k++) {
+        const f = gj.features[k], p = f && f.properties ? f.properties : {};
+        if (p && p.NUTS3_ID && !p.NUTS_ID)     p.NUTS_ID = p.NUTS3_ID;
+        if (p && p.NUTS3_NAME && !p.NUTS_NAME) p.NUTS_NAME = p.NUTS3_NAME;
+      }
+    }
 
-    // write canonical URL (keeps ?indicator=...)
-    syncUrl(false);
+    S.geoData = gj;
+
+    // Compute global means for this level (unchanged)
+    const means = Object.create(null);
+    ['forgottenVoters','willingnessPay','renewableSupport'].forEach(m => {
+      let sum = 0, count = 0;
+      for (const id in S.dataById) {
+        const v = S.dataById[id][m];
+        if (v != null && isFinite(v)) { sum += v; count++; }
+      }
+      means[m] = count ? (sum / count) : null;
+    });
+    globalMeans[level] = means;
+
+    S.loaded = true;
+    onReady && onReady();
+  }).catch(err => {
+    console.error('Level load failed (' + level + '):', err);
+    alert('Failed to load data for ' + (LEVELS[level].label || level));
   });
+}  
 }
 
   /* ================================
