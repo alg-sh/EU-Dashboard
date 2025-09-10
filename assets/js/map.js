@@ -1412,7 +1412,7 @@ function boundsFromFeatures(features) {
      Highlight helpers
      ================================ */
   function highlightLayer(layer) {
-    layer.setStyle({ weight: 0.7, color: '#A1FCC2', fillOpacity: 1 });
+    layer.setStyle({ weight: 0.7, color: '#A1FCC2', opacity: 1, fillOpacity: 1 });
     layer.bringToFront && layer.bringToFront();
   }
 
