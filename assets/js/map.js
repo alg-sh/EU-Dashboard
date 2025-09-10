@@ -308,12 +308,12 @@ map.touchZoom.disable();        // pinch zoom on trackpads / touch
   }
 })();
 
-// Use prefit bounds if provided, else fall back to EU default
+// Use prefit bounds if provided; otherwise let the first data layer decide bounds
 if (prefitBounds) {
   map.fitBounds(prefitBounds, { animate: false });
   window.__DASH_DID_PREFIT__ = true;
 } else {
-  map.setView([52, 10], 4);
+  // no hardcoded default — we'll pick a country from the first layer & fit to it
   window.__DASH_DID_PREFIT__ = false;
 }
 
@@ -536,11 +536,15 @@ function cleanup() {
           syncWrappedSelectLabel(countrySelect);
         }
         rebuildLayer();
-        map.setView(prevCenter, prevZoom, { animate: false });
+        if (hasCountry) {
+  map.setView(prevCenter, prevZoom, { animate: false }); // preserve camera
+} else {
+  zoomToCurrentFilter(); // clean overview when no country selected
+}
         updateHoverInfo();
       });
     });
-    
+
     // Kick off the initial data load + first paint
 ensureLevelLoaded(currentLevel, () => {
   populateCountrySelectFromStore(currentLevel);
@@ -834,11 +838,21 @@ ensureLevelLoaded(currentLevel, () => {
     try { map.getContainer().style.visibility = 'visible'; } catch {}
     }
 
-    // Save full-bounds once (EU view)
-    if (!initialBounds) {
-      const b0 = getLayerBounds(geojsonLayer);
-      if (b0 && b0.isValid && b0.isValid()) initialBounds = L.latLngBounds(b0.getSouthWest(), b0.getNorthEast());
-    }
+// Save full-bounds once (EU overview) using a mainland-first extent
+if (!initialBounds) {
+  // Use NUTS3 for the overview even when current level is '0' (avoids overseas)
+  const overviewFeats = (currentLevel === '0')
+    ? getFeaturesFor('3', '__all__')
+    : getFeaturesFor(currentLevel, '__all__');
+
+  const mainland = filterToMainlandIfApplicable(overviewFeats);
+  const b0 = boundsFromFeatures(mainland.length ? mainland : overviewFeats);
+  if (b0 && b0.isValid && b0.isValid()) {
+    initialBounds = L.latLngBounds(b0.getSouthWest(), b0.getNorthEast());
+  }
+}
+
+
   }
 
   function style(feature) {
@@ -849,8 +863,8 @@ ensureLevelLoaded(currentLevel, () => {
     return {
       fillColor: getColor(val),
       weight: 0.7,
-      opacity: 1,
-      color: '#2A192C',
+      opacity: 0.3,
+      color: '#ffffff',
       fillOpacity: 0.9
     };
   }
@@ -1283,10 +1297,7 @@ ensureLevelLoaded(currentLevel, () => {
           '<img src="assets/icons/Homeicon.svg" alt="" class="zh-icon" />',
           'Reset view',
           'leaflet-control-zoom-home',
-          () => {
-            if (!initialBounds || !initialBounds.isValid || !initialBounds.isValid()) return;
-            map.fitBounds(initialBounds.pad(0.04), { animate: false });
-          }
+          () => { zoomToCurrentFilter(); }
         );
         L.DomEvent.disableClickPropagation(container);
         L.DomEvent.disableScrollPropagation(container);
@@ -1295,6 +1306,49 @@ ensureLevelLoaded(currentLevel, () => {
     });
     map.addControl(new ZoomHome());
   }
+
+  // ===== Zoom pads (fixed, device-independent) =====
+const FIT_PAD_ALL_BY_LEVEL = { '0': 0.030, '3': 0.030 }; // overview pads
+const FIT_PAD_COUNTRY = 0.055;                            // when a country is selected
+const FIT_PADDING_PX = [12, 12];                          // pixel padding
+
+// ===== Mainland-only preference for bounds (keeps view on Europe) =====
+const EU_MAINLAND_BBOX = { minLng: -11, maxLng: 35, minLat: 34, maxLat: 72 };
+function isMainlandEUFeature(feature) {
+  try {
+    const tmp = L.geoJson(feature);
+    const c = tmp.getBounds().getCenter();
+    tmp.remove && tmp.remove();
+    return (
+      c.lng >= EU_MAINLAND_BBOX.minLng && c.lng <= EU_MAINLAND_BBOX.maxLng &&
+      c.lat >= EU_MAINLAND_BBOX.minLat && c.lat <= EU_MAINLAND_BBOX.maxLat
+    );
+  } catch { return true; }
+}
+function filterToMainlandIfApplicable(features) {
+  const m = (features || []).filter(isMainlandEUFeature);
+  return m.length ? m : (features || []);
+}
+
+// ===== Small utilities to reuse your filtering logic =====
+function getFeaturesFor(level, country) {
+  const S = store[level];
+  if (!S || !S.geoData) return [];
+  let feats = (S.geoData.features || []);
+  if (country && country !== '__all__') {
+    const ids = S.countryIndex[country] || new Set();
+    feats = feats.filter(f => ids.has(idFromProps(f.properties, level)));
+  }
+  return feats;
+}
+function boundsFromFeatures(features) {
+  if (!features || !features.length) return null;
+  const tmp = L.geoJson({ type: 'FeatureCollection', features });
+  const b = getLayerBounds(tmp);
+  try { tmp.remove && tmp.remove(); } catch {}
+  return b;
+}
+
 
   /* ================================
      Bounds helpers & zoom to selection
@@ -1321,17 +1375,38 @@ ensureLevelLoaded(currentLevel, () => {
   }
 
   function zoomToCurrentFilter() {
-    if (!map) return;
-    if (window.__DASH_DID_PREFIT__){
-    window.__DASH_DID_PREFIT__ = false;
-    return;
-    }
-    const target = (currentCountry === '__all__') ? initialBounds : getLayerBounds(geojsonLayer);
-    if (!target || !target.isValid || !target.isValid()) return;
-    const padded = target.pad(currentCountry === '__all__' ? 0.04 : 0.06);
-    map.invalidateSize();
-    map.fitBounds(padded, { padding: [28, 28], animate: false });
+  if (!map) return;
+
+  // Skip one-time prefit if some earlier code explicitly set it
+  if (window.__DASH_DID_PREFIT__) { window.__DASH_DID_PREFIT__ = false; return; }
+
+  let feats;
+  if (currentCountry === '__all__') {
+    // Overview: always use NUTS3 for the frame (keeps mainland focus)
+    feats = getFeaturesFor('3', '__all__');
+    feats = filterToMainlandIfApplicable(feats);
+  } else {
+    // Country selected: compute bounds from the finer NUTS3 features when possible
+    const nuts3Feats = getFeaturesFor('3', currentCountry);
+    feats = nuts3Feats.length ? nuts3Feats : getFeaturesFor(currentLevel, currentCountry);
+    if (currentLevel === '3') feats = filterToMainlandIfApplicable(feats);
   }
+
+  let target = boundsFromFeatures(feats);
+  if (!target || !target.isValid || !target.isValid()) {
+    // Fallback to precomputed overview
+    if (!initialBounds || !initialBounds.isValid || !initialBounds.isValid()) return;
+    target = initialBounds;
+  }
+
+  const pad = (currentCountry && currentCountry !== '__all__')
+    ? FIT_PAD_COUNTRY
+    : (FIT_PAD_ALL_BY_LEVEL[currentLevel] ?? 0.03);
+
+  map.invalidateSize();
+  map.fitBounds(target.pad(pad), { padding: FIT_PADDING_PX, animate: false });
+}
+
 
   /* ================================
      Highlight helpers
