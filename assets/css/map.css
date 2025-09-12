@@ -757,3 +757,54 @@ html, body { height: 100%; margin: 0; }
   gap: 0px;                          /* adjust to taste (6–10px) */
 }
 
+/* Make the left panel a vertical stack so we can push brand to the bottom */
+#side-panel.map-side {
+  display: flex;
+  flex-direction: column;
+}
+
+/* This row sits at the bottom of the panel */
+.panel-brand {
+  margin-top: auto;                 /* pushes this section to the bottom */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;   /* logo left, QR right */
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.12); /* subtle divider on dark bg */
+}
+
+/* Tidy sizes (adjust to taste) */
+.brand-logo {
+  height: 32px;                     /* keep logo crisp */
+  width: auto;
+  max-width: 180px;                 /* prevent overflow with long logos */
+}
+
+.qr-img {
+  width: 80px;
+  height: auto;
+  border-radius: 8px;               /* optional: soften edges if PNG with white bg */
+  background: #fff;                 /* keeps contrast on dark panels */
+  padding: 4px;                     /* tiny white border for readability */
+  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+}
+
+/* Responsive: scale down the QR on narrower screens */
+@media (max-width: 1200px) {
+  .qr-img { width: 96px; }
+}
+@media (max-width: 640px) {
+  .panel-brand { gap: 12px; }
+  .brand-logo { height: 28px; }
+  .qr-img { width: 84px; }
+}
+
+.panel-brand {
+  padding-bottom: 16px;   /* add extra space inside the section */
+}
+
+.panel-brand {
+  margin-bottom: 16px;
+  padding-top: 20px;     /* increases distance between line and content */
+}
