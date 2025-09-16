@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <!-- Your CSS (cacheable) -->
-  <link rel="stylesheet" href="assets/css/map.css?v=3" />
+  <link rel="stylesheet" href="assets/css/map.css?v=4" />
 
   <!-- Start pulling data as soon as the HTML parses -->
 <link rel="preload" as="fetch" href="assets/data/nuts3-copy.geojson" crossorigin>
@@ -26,7 +26,14 @@
     <div class="dash-grid">
       <!-- Left panel (title + filters + hover info) -->
       <aside id="side-panel" class="map-side" aria-label="Dashboard filters">
-        <h1 class="panel-title">Project Tempo European Dashboard</h1>
+        <section class="panel-section panel-header">
+          <h1 class="panel-title">European MRP Dashboard</h1>
+          <img
+            src="assets/img/company-logo.svg"
+            alt="Company logo"
+            class="brand-logo"
+          />
+        </section>
 
         <!-- Filters live INSIDE the panel -->
         <section id="filters" class="panel-section">
@@ -62,29 +69,6 @@
         <section id="hover-info" class="panel-section" aria-live="polite">
           Hover over a region
         </section>
-
-        <section class="panel-section panel-brand">
-  
-          <img
-    src="assets/img/company-logo.svg"
-    alt="Company logo"
-    class="brand-logo"
-    height="36"
-  />
-
-  <a href="https://projecttempo.com/" target="_blank" rel="noopener">
-    <img
-      src="assets/img/qrcode.svg"
-      alt="QR code linking to client website"
-      class="qr-img"
-      width="100" height="100"
-      loading="lazy"
-      decoding="async"
-    />
-  </a>
-
-  
-</section>
 
       </aside>
 

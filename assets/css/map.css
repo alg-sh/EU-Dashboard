@@ -38,7 +38,7 @@ body { margin: 0; background: #260E26; color: #fff; }
   --font-body: 1rem;         /* 16px */
   --font-label: 0.875rem;    /* 14px */
   --font-control: 0.9375rem; /* 15px */
-  --font-title: clamp(1.375rem, 1rem + 1.2vw, 2rem); /* ~22–32px */
+  --font-title: clamp(1.25rem, 0.95rem + 1.1vw, 1.75rem); /* ~20–28px */
 
   /* Map controls (zoom/home) */
   --zoom-size: clamp(2.25rem, 2.2vw, 2.75rem);   /* ~36–44px touch target */
@@ -78,34 +78,65 @@ body { margin: 0; background: #260E26; color: #fff; }
 /* ================================
    Panel title (text styling)
    ================================ */
+
 .panel-title {
-  position: relative;         /* establishes containing block for ::after underline */
-  margin: 0 0 16px 0;         /* space below the title */
+  position: relative;         /* keeps options open for local accents */
+  margin: 0;                  /* let the container control spacing */
   line-height: 1.1;           /* tight heading leading */
   font-weight: 700;           /* bold */
   font-size: var(--font-title);         /* heading size */
   color: #ffffff;             /* TITLE COLOR (mint) — recoloring the text */
-  display: inline-block;      /* shrink to text width so the underline matches the title */
+  flex: 1 1 320px;            /* give the title breathing room next to the logo */
+  overflow: hidden;           /* prevent spillover past three lines */
+  max-height: calc(3 * 1.1em);/* coarse fallback: cap height to roughly three lines */
+  display: -webkit-box;       /* allow multi-line clamp in supporting browsers */
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.panel-header {
+  position: relative;         /* anchor the accent underline */
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-wrap: nowrap;          /* keep logo and title on the same row */
+  gap: 16px;
+  padding-bottom: 12px;       /* breathing room for the underline */
+  margin-bottom: 16px;        /* keep separation from following sections */
+}
+
+.panel-header .panel-title {
+  margin: 0;
+}
+
+.panel-header .brand-logo {
+  flex: 0 0 auto;             /* prevent the logo from shrinking on narrow widths */
+}
+
+@media (max-width: 640px) {
+  .panel-header {
+    flex-wrap: wrap;          /* stack on very narrow viewports to avoid overflow */
+    align-items: flex-end;
+  }
 }
 
 /* ================================
    Title underline (accent bar)
    ================================ */
-.panel-title::after {
+.panel-header::after {
   content: "";
-  position: absolute;         /* position relative to .panel-title */
+  position: absolute;         /* position relative to .panel-header */
   left: 0;
-  bottom: -8px;               /* gap between text and line */
-  width: 100%;                /* exactly the title width */
+  right: 0;
+  bottom: 0;                  /* sit flush with the bottom padding */
   height: 2px;                /* thin line */
   background: #A1FCC2;        /* UNDERLINE COLOR — recoloring the line */
   border-radius: 2px;         /* soft edges */
-  display: block;
 }
 
-/* Prevent flexbox from stretching the title to full panel width */
+/* Ensure headings inherit the panel header alignment behaviour */
 #side-panel.map-side .panel-title {
-  align-self: flex-start;
+  align-self: auto;            /* follow the container alignment for baseline pairing */
 }
 
 /* ================================
@@ -578,9 +609,10 @@ body.cursor-click * {
 
 .dash-grid {
   display: grid;
-  grid-template-columns: clamp(260px, 24vw, 360px) 1fr;
+  grid-template-columns: clamp(280px, 24vw, 380px) 1fr;
   gap: 12px;
   min-height: calc(var(--vh) - var(--header-clear));
+  align-items: stretch;            /* stretch sidebar to match map height */
 }
 
 .map-wrap { position: relative; }
@@ -590,8 +622,8 @@ body.cursor-click * {
 #side-panel.map-side {
   position: sticky;
   top: 10px;
-  align-self: start;
-  height: calc(var(--vh) - var(--header-clear) - 20px);
+  align-self: stretch;
+  max-height: calc(var(--vh) - var(--header-clear) - 20px);
   overflow: auto;
   z-index: 500;
 }
@@ -660,9 +692,9 @@ body.cursor-click * {
 /* === Panel left / Map right === */
 .dash-grid {
   display: grid;
-  grid-template-columns: clamp(280px, 24vw, 380px) 1fr;
+  grid-template-columns: clamp(300px, 26vw, 400px) 1fr;
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
   padding: 16px;
 }
 
@@ -680,7 +712,7 @@ body.cursor-click * {
 #side-panel.map-side {
   position: sticky;
   top: 16px;
-  align-self: start;
+  align-self: stretch;
 }
 
 /* Stack on smaller screens */
@@ -757,54 +789,12 @@ html, body { height: 100%; margin: 0; }
   gap: 0px;                          /* adjust to taste (6–10px) */
 }
 
-/* Make the left panel a vertical stack so we can push brand to the bottom */
-#side-panel.map-side {
-  display: flex;
-  flex-direction: column;
-}
-
-/* This row sits at the bottom of the panel */
-.panel-brand {
-  margin-top: auto;                 /* pushes this section to the bottom */
-  display: flex;
-  align-items: center;
-  justify-content: space-between;   /* logo left, QR right */
-  gap: 16px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255,255,255,0.12); /* subtle divider on dark bg */
-}
-
 /* Tidy sizes (adjust to taste) */
 .brand-logo {
-  height: 32px;                     /* keep logo crisp */
+  height: 40px;                     /* keep logo crisp */
   width: auto;
   max-width: 180px;                 /* prevent overflow with long logos */
 }
-
-.qr-img {
-  width: 80px;
-  height: auto;
-  border-radius: 8px;               /* optional: soften edges if PNG with white bg */
-  background: #fff;                 /* keeps contrast on dark panels */
-  padding: 4px;                     /* tiny white border for readability */
-  box-shadow: 0 1px 3px rgba(0,0,0,.25);
-}
-
-/* Responsive: scale down the QR on narrower screens */
-@media (max-width: 1200px) {
-  .qr-img { width: 96px; }
-}
 @media (max-width: 640px) {
-  .panel-brand { gap: 12px; }
-  .brand-logo { height: 28px; }
-  .qr-img { width: 84px; }
-}
-
-.panel-brand {
-  padding-bottom: 16px;   /* add extra space inside the section */
-}
-
-.panel-brand {
-  margin-bottom: 16px;
-  padding-top: 20px;     /* increases distance between line and content */
+  .brand-logo { height: 34px; }
 }
