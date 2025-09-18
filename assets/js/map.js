@@ -100,7 +100,8 @@
   let currentLevel   = '3';        // '3' (NUTS3) or '0' (Country)
   let currentMeasure = 'forgottenVoters';
   let currentCountry = '__all__';  // CNTR_NAME, or __all__
-  let map, geojsonLayer = null, initialBounds = null;
+  let map, geojsonLayer = null, countryOutlineLayer = null, initialBounds = null;
+  let countryOutlineLoading = false;
   let controlsWired = false;
   let searchInput = null;  // #region-search
   let ac = null;           // #region-ac (autocomplete container)   
@@ -226,6 +227,15 @@
       if (val != null && String(val).trim() !== '') return String(val).trim();
     }
     return '';
+  }
+  function countryFromProps(p, level) {
+    p = p || {};
+    const candidates = LEVELS[level].countryFld;
+    for (let i = 0; i < candidates.length; i++) {
+      const val = p[candidates[i]];
+      if (val != null && String(val).trim() !== '') return String(val);
+    }
+    return p.CNTR_NAME || '';
   }
 
   // ---- bootstrap: ensure vendors, then init (re-init if container changed) ----
@@ -393,6 +403,10 @@ function cleanup() {
         map._domObserver.disconnect();
         map._domObserver = null;
       }
+      if (countryOutlineLayer) {
+        try { map.removeLayer(countryOutlineLayer); } catch {}
+        countryOutlineLayer = null;
+      }
       map.remove(); // tears Leaflet down and clears el._leaflet_id
     }
   } catch (e) {
@@ -402,7 +416,9 @@ function cleanup() {
   // ---- reset all globals/state ----
   map = null;
   geojsonLayer = null;
+  countryOutlineLayer = null;
   initialBounds = null;
+  countryOutlineLoading = false;
   controlsWired = false;
   window.__DASH_MAP_INSTANCE__ = null;
 
@@ -832,6 +848,7 @@ ensureLevelLoaded(currentLevel, () => {
     // Replace layer
     if (geojsonLayer) { map.removeLayer(geojsonLayer); geojsonLayer = null; }
     geojsonLayer = L.geoJson({ type: 'FeatureCollection', features: feats }, { style, onEachFeature }).addTo(map);
+    updateCountryOutlineLayer();
     // First real layer is on → reveal the map once
     if (!window.__DASH_FIRST_LAYER_READY__) {
     window.__DASH_FIRST_LAYER_READY__ = true;
@@ -853,6 +870,74 @@ if (!initialBounds) {
 }
 
 
+  }
+
+  function updateCountryOutlineLayer() {
+    if (!map) return;
+
+    const S0 = store['0'];
+    const ready = S0 && S0.loaded && S0.geoData && Object.keys(S0.dataById).length;
+
+    if (!ready) {
+      if (!countryOutlineLoading) {
+        countryOutlineLoading = true;
+        ensureLevelLoaded('0', function () {
+          countryOutlineLoading = false;
+          updateCountryOutlineLayer();
+        });
+      }
+      return;
+    }
+
+    if (countryOutlineLayer && map) {
+      try { map.removeLayer(countryOutlineLayer); } catch {}
+      countryOutlineLayer = null;
+    }
+
+    const features = Array.isArray(S0.geoData.features) ? S0.geoData.features : [];
+    if (!features.length) return;
+
+    const desiredCountry = (currentCountry && currentCountry !== '__all__') ? currentCountry : null;
+    const allowSet = desiredCountry
+      ? (S0.countryIndex[desiredCountry] instanceof Set ? S0.countryIndex[desiredCountry] : null)
+      : null;
+
+    if (desiredCountry && !allowSet) return;
+
+    const filtered = [];
+    for (let i = 0; i < features.length; i++) {
+      const f = features[i];
+      if (!f || !f.properties) continue;
+      const id = idFromProps(f.properties, '0');
+      if (!id) continue;
+      if (!S0.dataById[id]) continue;
+      if (allowSet && !allowSet.has(id)) continue;
+      filtered.push(f);
+    }
+
+    if (!filtered.length) return;
+
+    const paneName = 'countryOutlinePane';
+    if (!map.getPane(paneName)) {
+      map.createPane(paneName);
+      const pane = map.getPane(paneName);
+      pane.style.zIndex = 550;
+      pane.style.pointerEvents = 'none';
+    }
+
+    countryOutlineLayer = L.geoJson({ type: 'FeatureCollection', features: filtered }, {
+      pane: paneName,
+      interactive: false,
+      style: function () {
+        return {
+          color: '#230F25',
+          weight: 1,
+          opacity: 0.8,
+          fillOpacity: 0,
+          fill: false
+        };
+      }
+    }).addTo(map);
   }
 
   function style(feature) {
@@ -1045,11 +1130,18 @@ if (!initialBounds) {
 
   // Build HTML for the on-map tooltip
   function tooltipHtml(props) {
-    const name  = escapeHtml(nameFromProps(props, currentLevel));
+    const nameRaw = nameFromProps(props, currentLevel) || '';
+    const name = escapeHtml(nameRaw);
     const label = measureNames[currentMeasure] || currentMeasure;
     const id    = idFromProps(props, currentLevel);
     const row   = (store[currentLevel] && store[currentLevel].dataById[id]) || {};
     const val   = row ? row[currentMeasure] : null;
+    const countryRawCandidate = (row && row.CNTR_NAME) || countryFromProps(props, currentLevel);
+    const countryBase = countryRawCandidate ? String(countryRawCandidate).trim() : '';
+    const nameNorm = String(nameRaw).trim().toLowerCase();
+    const countryNorm = countryBase.toLowerCase();
+    const showCountry = countryBase && countryBase !== '—' && countryNorm !== nameNorm;
+    const countrySuffix = showCountry ? ', ' + escapeHtml(countryBase) : '';
 
     const spark = dotPlotSVG({
       min: plotMin, // updated for fixed dot plot range
@@ -1065,7 +1157,7 @@ if (!initialBounds) {
     const delta = deltaLine({ value: val, mean: scaleMean, epsilon: 0.5 });
 
     return (
-      '<div class="tip-title">' + name + '</div>' +
+      '<div class="tip-title">' + name + countrySuffix + '</div>' +
       '<div class="tip-row">' +
         '<span class="tip-m">' + escapeHtml(label) + '</span>' +
         '<span class="tip-v">' + fmtValue(val) + '</span>' +

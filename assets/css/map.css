@@ -142,7 +142,19 @@ body { margin: 0; background: #260E26; color: #fff; }
 /* ================================
    Section blocks inside the panel
    ================================ */
+
 .panel-section { margin: 0; }
+
+.panel-data-source {
+  margin-top: 8px;
+  font-size: clamp(0.75rem, 0.72rem + 0.15vw, 0.875rem);
+  color: #ffffff;
+  opacity: 0.85;
+}
+
+.panel-data-source p {
+  margin: 0;
+}
 
 /* ================================
    Filters (now INSIDE the panel)
